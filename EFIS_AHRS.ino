@@ -17,7 +17,7 @@ unsigned char canMsg[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 //AHRS data
 const unsigned int CAN_Euler_Msg_ID = 72; // CAN Msg ID in DEC 
-const unsigned int CAN_Euler_Period = 45; // How often message sent in milliseconds
+const unsigned int CAN_Euler_Period = 100; // How often message sent in milliseconds
 unsigned long CAN_Euler_Timestamp = 0; // when was the last message sent
 int MAG = 0;
 int gRoll = 0;
@@ -25,11 +25,30 @@ int gPitch = 0;
 int gTurnRate = 0;
 
 const unsigned int CAN_Acc_Msg_ID = 73; // CAN Msg ID in DEC 
-const unsigned int CAN_Acc_Period = 45; // How often message sent in milliseconds
+const unsigned int CAN_Acc_Period = 100; // How often message sent in milliseconds
 unsigned long CAN_Acc_Timestamp = 0; // when was the last message sent
 int AccX = 0;
 int AccY = 0;
 int AccZ = 0;
+
+// Acceleration data needs to be smoothed. Frequency responce for G-Meters (X-axis) should be 0-11Hz according to MIL-A-5885C
+// For now the Moving Average filter is being used
+// The arrays/vars below are for the Moving Average Filter 
+#define AccX_ArraySize 40  //slip ball
+#define AccY_ArraySize 20   //forward acceleration
+#define AccZ_ArraySize 20   //wing G-loading
+
+int AccX_Array[AccX_ArraySize];
+int AccY_Array[AccY_ArraySize];
+int AccZ_Array[AccZ_ArraySize];
+
+int AccX_ArrayIndex = 0;
+int AccY_ArrayIndex = 0;
+int AccZ_ArrayIndex = 0;
+
+int AccX_Sum = 0;
+int AccY_Sum = 0;
+int AccZ_Sum = 0;
 
 
 /**********************   BNO 055   ********************************/
@@ -187,54 +206,11 @@ if(CAN_MSGAVAIL == CAN.checkReceive())            // check if data coming
     }
   }
   
-// BEGIN of the Button and LED handling block *********************************************************
-// the following block if for debugging only.
-// it controlls the onboard button and the LED's
-// calibration can be saved into EEPROM by activating the "calibration" mode by pressing the button once
-// Red LED should be steady ON
-// once satisfied with the calibration status press and hold the button untill the Red LED start slashing
-// at that point the calibration will be written to EEPROM and temporary variables.
- 
-  if (digitalRead(ButtonPin) == 0) {
-    digitalWrite(GreenLED,1);
-    if (ButtonTimer == 0) {
-      ButtonTimer = millis();
-    } else {
-      if (millis() - ButtonTimer > 2000 and digitalRead(RedLED) == 1) {
-        digitalWrite(RedLED,1);
-        // write calibration data into EEPROM
-        for (int i = 0; i <= 10; i++) {
-           digitalWrite(RedLED, !digitalRead(RedLED));
-           delay(200);
-        }
-        WriteGyroCalibration();
-        Calibration_Mode = 0;
-        digitalWrite(RedLED,0);
-        ButtonTimer = 0;
-      }
-    }
-  } else {
-    digitalWrite(GreenLED,0);
-    
-    //toggle Red Led and calibration status
-    if (ButtonTimer > 0) { //button released
-      digitalWrite(RedLED, !digitalRead(RedLED));
-      if (Calibration_Mode == 0) {
-        Calibration_Mode = 1;
-      } else {
-        Calibration_Mode = 0;
-      }
-    }
-    
-    ButtonTimer = 0;
-    
-  }
+
+//  if (Calibration_Mode == 1) {
+//    Gyro_Calibration();
+//  } 
   
-  if (Calibration_Mode == 1) {
-    Gyro_Calibration();
-  } 
-  
-// END of the Button and LED handling block *********************************************************
 
   Gyro();
 

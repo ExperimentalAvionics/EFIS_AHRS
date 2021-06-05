@@ -16,8 +16,16 @@ VECTOR_GRAVITY (values in m/s^2)
   MAG = event.orientation.x;
   gRoll = (-1)*event.orientation.y;
   gPitch = (-1)*event.orientation.z;
+/*
+  Serial.print("Pitch = ");
+  Serial.println(gPitch);
 
+  Serial.print("Roll = ");
+  Serial.println(gRoll);
 
+  Serial.print("Heading = ");
+  Serial.println(MAG);
+*/
 //Get acceleration data
 
   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
@@ -25,6 +33,30 @@ VECTOR_GRAVITY (values in m/s^2)
   AccX = acc.x()*100; //slip ball
   AccY = acc.y()*100; //forward acceleration
   AccZ = acc.z()*100; //wing loading
+
+  AccX_Sum -= AccX_Array[AccX_ArrayIndex];
+  AccY_Sum -= AccY_Array[AccY_ArrayIndex];
+  AccZ_Sum -= AccZ_Array[AccZ_ArrayIndex];
+  
+  AccX_Array[AccX_ArrayIndex] = AccX;
+  AccY_Array[AccY_ArrayIndex] = AccY;
+  AccZ_Array[AccZ_ArrayIndex] = AccZ;
+
+  AccX_Sum += AccX;
+  AccY_Sum += AccY;
+  AccZ_Sum += AccZ;
+
+  AccX_ArrayIndex +=1;
+  AccY_ArrayIndex +=1;
+  AccZ_ArrayIndex +=1;
+  
+  if (AccX_ArrayIndex == AccX_ArraySize) {AccX_ArrayIndex = 0;}
+  if (AccY_ArrayIndex == AccY_ArraySize) {AccY_ArrayIndex = 0;}
+  if (AccZ_ArrayIndex == AccZ_ArraySize) {AccZ_ArrayIndex = 0;}
+
+  AccX = AccX_Sum/AccX_ArraySize;
+  AccY = AccY_Sum/AccY_ArraySize;
+  AccZ = AccZ_Sum/AccZ_ArraySize;
 
   calstat = bno.getCalib();
   
